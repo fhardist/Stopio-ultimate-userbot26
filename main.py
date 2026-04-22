@@ -74,35 +74,34 @@ async def game_handler(_, message):
 
 @app.on_message(filters.me & filters.command("em", "."))
 async def anim_handler(_, message):
-    # Daftar frame animasi yang lebih variatif
-    animation_frames = [
-        "🚶        ",
-        "  🚶      ",
-        "    🚶    ",
-        "      🚶  ",
-        "        🚶",
-        "        🏃",
-        "      🏃  ",
-        "    🏃    ",
-        "  🏃      ",
-        "🏃        ",
-        "🐢        ",
-        "  🐢      ",
-        "    🐢    "
+    # Kita pakai spasi yang berbeda jumlahnya agar Telegram mendeteksi "perubahan teks" yang nyata
+    frames = [
+        "🚶. ", 
+        " .🚶", 
+        "🚶..", 
+        "..🚶", 
+        "🚶...", 
+        "...🚶", 
+        "🐢. ", 
+        " .🐢", 
+        "🐢.."
     ]
     
-    # Loop sebanyak 2 kali putaran
-    for _ in range(2): 
-        for frame in animation_frames:
-            try:
-                await message.edit(frame)
-                # Jeda ideal adalah 0.5 detik agar tidak terkena Flood Limit
-                await asyncio.sleep(0.8) 
-            except Exception:
-                # Jika terkena limit, kita hentikan sementara agar tidak banned
-                break 
+    await message.edit("🎬 `Memulai animasi...`")
+    await asyncio.sleep(1) # Jeda awal agar server siap
     
-    await message.edit("✅ Animasi Selesai.")
+    for _ in range(2): # Ulangi 2 kali
+        for frame in frames:
+            try:
+                # Kita tambahkan edit dengan paksa
+                await message.edit(frame)
+                # Jeda 0.7 detik adalah "Sweet Spot" agar tidak dianggap spam tapi tetap terlihat gerak
+                await asyncio.sleep(0.7) 
+            except Exception as e:
+                # Kalau ada error 'Message Not Modified', kita abaikan saja
+                continue 
+                
+    await message.edit("✅ Animasi Berhasil Jalankan!")
 
 # --- 📍 FITUR LOKASI & PRIVASI ---
 
