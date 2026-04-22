@@ -6,15 +6,14 @@ from pyrogram.types import Message
 from dotenv import load_dotenv
 from geopy.geocoders import Nominatim
 
-# --- KONFIGURASI DASAR ---
+# --- KONFIGURASI ---
 load_dotenv()
 API_ID = int(os.getenv("API_ID"))
 API_HASH = os.getenv("API_HASH")
 STRING_SESSION = os.getenv("STRING_SESSION")
 
-# Inisialisasi Client Pyrogram
 app = Client(
-    "my_userbot_2026",
+    "my_userbot",
     session_string=STRING_SESSION,
     api_id=API_ID,
     api_hash=API_HASH
@@ -22,90 +21,102 @@ app = Client(
 
 geolocator = Nominatim(user_agent="my_userbot_2026")
 
-# ================= 1. FITUR INFORMASI & SELF =================
+# --- 🛠 PERINTAH DASAR ---
 
 @app.on_message(filters.me & filters.command("ping", "."))
-async def ping_handler(_, message: Message):
+async def ping_handler(_, message):
     start = asyncio.get_event_loop().time()
     await message.edit("🚀 `Pinging...` ")
-    end = asyncio.get_event_loop().time()
-    ms = round((end - start) * 1000, 2)
+    ms = round((asyncio.get_event_loop().time() - start) * 1000, 2)
     await message.edit(f"🚀 **Userbot Online!**\nLatency: `{ms}ms` 🟢")
 
-# ================= 2. FITUR ADMIN & PRIVASI (UNCAST) =================
-
-@app.on_message(filters.me & filters.command("uncast", "."))
-async def uncast_handler(client, message: Message):
-    await message.edit("🧹 `Uncasting...` Menghapus jejak.")
-    async for msg in client.get_chat_history(message.chat.id):
-        if msg.from_user and msg.from_user.is_self:
-            try:
-                await msg.delete()
-            except:
-                pass
-    await message.respond("✅ **Uncast Selesai.**")
-
-# ================= 3. FITUR LOKASI =================
-
-@app.on_message(filters.me & filters.command("lokasi", "."))
-async def lokasi_handler(_, message: Message):
+@app.on_message(filters.me & filters.command("ai", "."))
+async def ai_handler(_, message):
     if len(message.command) < 2:
-        return await message.edit("❌ Masukkan nama tempat!")
-    place = message.text.split(None, 1)[1]
-    await message.edit(f"🔍 `Mencari:` {place}...")
+        return await message.edit("❌ Masukkan pertanyaan!")
+    prompt = message.text.split(None, 1)[1]
+    await message.edit("🤖 `AI Berpikir...` ")
     try:
-        location = geolocator.geocode(place)
-        if location:
-            await message.delete()
-            await app.send_location(message.chat.id, location.latitude, location.longitude)
-        else:
-            await message.edit("❌ Lokasi tidak ditemukan.")
+        # Menggunakan API Blackbox/Chatgpt yang lebih stabil di 2026
+        res = requests.get(f"https://api.sandipbaruwal.com/gpt4?query={prompt}").json()
+        await message.edit(f"🤖 **Pertanyaan:** `{prompt}`\n\n**Jawaban:**\n{res['answer']}")
     except:
-        await message.edit("❌ Gagal mencari lokasi.")
+        await message.edit("❌ Gagal terhubung ke otak AI.")
 
-# ================= 4. FITUR FAKE STATUS & GAME =================
+@app.on_message(filters.me & filters.command("tr", "."))
+async def translate_handler(_, message):
+    if not message.reply_to_message or len(message.command) < 2:
+        return await message.edit("❌ Balas sebuah pesan dan ketik `.tr en` (contoh).")
+    lang = message.command[1]
+    text = message.reply_to_message.text
+    await message.edit("🔄 `Menerjemahkan...` ")
+    try:
+        res = requests.get(f"https://api.popcat.xyz/translate?to={lang}&text={text}").json()
+        await message.edit(f"🌐 **Terjemahan ({lang.upper()}):**\n\n{res['translated']}")
+    except:
+        await message.edit("❌ Gagal menerjemahkan.")
+
+# --- 🎭 FITUR HIBURAN & STATUS ---
 
 @app.on_message(filters.me & filters.command("fake", "."))
-async def fake_handler(client, message: Message):
-    if len(message.command) < 2: 
-        return await message.edit("❌ Gunakan: `.fake typing` atau `.fake playing`")
+async def fake_handler(client, message):
+    if len(message.command) < 2: return
     action = message.command[1].lower()
     await message.delete()
-    # Pilihan: typing, playing, recording_audio
+    # Aksi: typing, playing, recording_video
     await client.send_chat_action(message.chat.id, action)
 
-@app.on_message(filters.me & filters.command(["dadu", "slot", "bola"], "."))
-async def game_handler(_, message: Message):
-    game_map = {"dadu": "🎲", "slot": "🎰", "bola": "⚽"}
-    emoji = game_map[message.command[0]]
+@app.on_message(filters.me & filters.command(["dadu", "slot"], "."))
+async def game_handler(_, message):
+    emoji = "🎲" if message.command[0] == "dadu" else "🎰"
     await message.delete()
     await app.send_dice(message.chat.id, emoji)
 
-# ================= 5. FITUR CERDAS (AI) =================
+@app.on_message(filters.me & filters.command("em", "."))
+async def anim_handler(_, message):
+    # Animasi orang jalan dan kura-kura
+    frames = ["🚶", " 🚶", "  🚶", "   🚶", "    🚶", "🐢", " 🐢", "  🐢"]
+    for _ in range(3): # Ulangi 3 kali
+        for frame in frames:
+            await message.edit(frame)
+            await asyncio.sleep(0.3)
+    await message.edit("✅ Animasi Selesai.")
 
-@app.on_message(filters.me & filters.command("ai", "."))
-async def ai_handler(_, message: Message):
-    if len(message.command) < 2:
-        return await message.edit("❌ Masukkan pertanyaan! Contoh: `.ai apa itu IT Support?` ")
-    
-    prompt = message.text.split(None, 1)[1]
-    await message.edit("🤖 `Meminta jawaban dari AI...` ")
-    
-    try:
-        # Menggunakan API publik yang lebih stabil
-        url = f"https://widipe.com/openai?text={prompt}"
-        response = requests.get(url)
-        
-        if response.status_code == 200:
-            data = response.json()
-            # Terkadang struktur json berbeda, kita ambil field 'result' atau 'data'
-            hasil = data.get("result") or data.get("data") or "Maaf, AI sedang bingung."
-            await message.edit(f"🤖 **Pertanyaan:** `{prompt}`\n\n**Jawaban:**\n{hasil}")
-        else:
-            await message.edit("❌ API AI sedang sibuk, coba lagi nanti.")
-            
-    except Exception as e:
-        await message.edit(f"❌ Error: {str(e)}")
+# --- 📍 FITUR LOKASI & PRIVASI ---
 
-print("✅ STOPIO ULTIMATE USERBOT 26 READY!")
+@app.on_message(filters.me & filters.command("lokasi", "."))
+async def lokasi_handler(_, message):
+    if len(message.command) < 2: return
+    place = message.text.split(None, 1)[1]
+    await message.edit(f"🔍 `Mencari:` {place}...")
+    loc = geolocator.geocode(place)
+    if loc:
+        await message.delete()
+        await app.send_location(message.chat.id, loc.latitude, loc.longitude)
+    else:
+        await message.edit("❌ Lokasi tidak ditemukan.")
+
+@app.on_message(filters.me & filters.command("uncast", "."))
+async def uncast_handler(client, message):
+    await message.edit("🧹 `Uncasting...` Menghapus pesan Anda.")
+    async for msg in client.get_chat_history(message.chat.id):
+        if msg.from_user and msg.from_user.is_self:
+            try: await msg.delete()
+            except: pass
+    await message.respond("✅ **Bersih!**", delete_after=3)
+
+@app.on_message(filters.me & filters.command("purge", "."))
+async def purge_handler(client, message):
+    if not message.reply_to_message:
+        return await message.edit("❌ Balas ke pesan awal untuk purge.")
+    
+    start_id = message.reply_to_message.id
+    msgs = []
+    async for msg in client.get_chat_history(message.chat.id, offset_id=start_id - 1, reverse=True):
+        msgs.append(msg.id)
+        if len(msgs) >= 100: # Limit 100 pesan sekali jalan
+            break
+    await client.delete_messages(message.chat.id, msgs)
+
+print("✅ ULTIMATE USERBOT 2026 IS ONLINE!")
 app.run()
