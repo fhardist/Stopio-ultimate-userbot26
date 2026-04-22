@@ -2,6 +2,7 @@ telethon
 python-dotenv
 requests
 geopy
-googletrans==4.0.0-rc1
+googletrans==3.1.0a0
 pillow
-httpx==0.24.1
+httpx==0.13.3
+h2==3.2.0
