@@ -7,6 +7,8 @@ from telethon.tl.types import ChatBannedRights
 from dotenv import load_dotenv
 from geopy.geocoders import Nominatim
 from googletrans import Translator
+from telethon import TelegramClient, events, functions, types
+from telethon.sessions import StringSession  # <--- Tambahkan ini
 
 # --- KONFIGURASI DASAR ---
 load_dotenv()
