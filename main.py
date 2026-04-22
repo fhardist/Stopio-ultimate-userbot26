@@ -86,14 +86,26 @@ async def game_handler(_, message: Message):
 @app.on_message(filters.me & filters.command("ai", "."))
 async def ai_handler(_, message: Message):
     if len(message.command) < 2:
-        return await message.edit("❌ Masukkan pertanyaan!")
+        return await message.edit("❌ Masukkan pertanyaan! Contoh: `.ai apa itu IT Support?` ")
+    
     prompt = message.text.split(None, 1)[1]
-    await message.edit("🤖 `AI Thinking...` ")
+    await message.edit("🤖 `Meminta jawaban dari AI...` ")
+    
     try:
-        res = requests.get(f"https://api.simsimi.net/v2/?text={prompt}&lc=id").json()
-        await message.edit(f"🤖 **AI:**\n\n{res['success']}")
-    except:
-        await message.edit("❌ Gagal terhubung ke AI.")
+        # Menggunakan API publik yang lebih stabil
+        url = f"https://widipe.com/openai?text={prompt}"
+        response = requests.get(url)
+        
+        if response.status_code == 200:
+            data = response.json()
+            # Terkadang struktur json berbeda, kita ambil field 'result' atau 'data'
+            hasil = data.get("result") or data.get("data") or "Maaf, AI sedang bingung."
+            await message.edit(f"🤖 **Pertanyaan:** `{prompt}`\n\n**Jawaban:**\n{hasil}")
+        else:
+            await message.edit("❌ API AI sedang sibuk, coba lagi nanti.")
+            
+    except Exception as e:
+        await message.edit(f"❌ Error: {str(e)}")
 
 print("✅ STOPIO ULTIMATE USERBOT 26 READY!")
 app.run()
