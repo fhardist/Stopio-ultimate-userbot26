@@ -74,12 +74,34 @@ async def game_handler(_, message):
 
 @app.on_message(filters.me & filters.command("em", "."))
 async def anim_handler(_, message):
-    # Animasi orang jalan dan kura-kura
-    frames = ["🚶", " 🚶", "  🚶", "   🚶", "    🚶", "🐢", " 🐢", "  🐢"]
-    for _ in range(3): # Ulangi 3 kali
-        for frame in frames:
-            await message.edit(frame)
-            await asyncio.sleep(0.3)
+    # Daftar frame animasi yang lebih variatif
+    animation_frames = [
+        "🚶        ",
+        "  🚶      ",
+        "    🚶    ",
+        "      🚶  ",
+        "        🚶",
+        "        🏃",
+        "      🏃  ",
+        "    🏃    ",
+        "  🏃      ",
+        "🏃        ",
+        "🐢        ",
+        "  🐢      ",
+        "    🐢    "
+    ]
+    
+    # Loop sebanyak 2 kali putaran
+    for _ in range(2): 
+        for frame in animation_frames:
+            try:
+                await message.edit(frame)
+                # Jeda ideal adalah 0.5 detik agar tidak terkena Flood Limit
+                await asyncio.sleep(0.5) 
+            except Exception:
+                # Jika terkena limit, kita hentikan sementara agar tidak banned
+                break 
+    
     await message.edit("✅ Animasi Selesai.")
 
 # --- 📍 FITUR LOKASI & PRIVASI ---
