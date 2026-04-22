@@ -1,14 +1,10 @@
 import os
 import asyncio
 import requests
-from telethon import TelegramClient, events, functions, types
-from telethon.tl.functions.channels import EditBannedRequest
-from telethon.tl.types import ChatBannedRights
+from pyrogram import Client, filters
+from pyrogram.types import Message
 from dotenv import load_dotenv
 from geopy.geocoders import Nominatim
-from googletrans import Translator
-from telethon import TelegramClient, events, functions, types
-from telethon.sessions import StringSession  # <--- Tambahkan ini
 
 # --- KONFIGURASI DASAR ---
 load_dotenv()
@@ -16,109 +12,88 @@ API_ID = int(os.getenv("API_ID"))
 API_HASH = os.getenv("API_HASH")
 STRING_SESSION = os.getenv("STRING_SESSION")
 
-client = TelegramClient(StringSession(STRING_SESSION), API_ID, API_HASH)
-geolocator = Nominatim(user_agent="my_userbot_2026")
-translator = Translator()
+# Inisialisasi Client Pyrogram
+app = Client(
+    "my_userbot_2026",
+    session_string=STRING_SESSION,
+    api_id=API_ID,
+    api_hash=API_HASH
+)
 
-# Variabel Global
-afk_reason = None
-gban_list = []
+geolocator = Nominatim(user_agent="my_userbot_2026")
 
 # ================= 1. FITUR INFORMASI & SELF =================
 
-@client.on(events.NewMessage(pattern=r'\.ping', outgoing=True))
-async def ping(event):
+@app.on_message(filters.me & filters.command("ping", "."))
+async def ping_handler(_, message: Message):
     start = asyncio.get_event_loop().time()
-    await event.edit("🚀 `Pinging...` ")
+    await message.edit("🚀 `Pinging...` ")
     end = asyncio.get_event_loop().time()
     ms = round((end - start) * 1000, 2)
-    await event.edit(f"🚀 **Userbot Online!**\nLatency: `{ms}ms` 🟢")
-
-@client.on(events.NewMessage(pattern=r'\.cek', outgoing=True))
-async def cek_riwayat(event):
-    if not event.is_reply:
-        return await event.edit("❌ **Balas ke pesan target.**")
-    reply = await event.get_reply_message()
-    await event.edit("🔍 **Mencari riwayat nama...**")
-    async with client.conversation("@SangMata_BOT") as conv:
-        await conv.send_message(f"/search_id {reply.sender_id}")
-        response = await conv.get_response()
-        await conv.mark_read()
-        await event.edit(f"📝 **Hasil Riwayat Nama:**\n\n{response.text}")
+    await message.edit(f"🚀 **Userbot Online!**\nLatency: `{ms}ms` 🟢")
 
 # ================= 2. FITUR ADMIN & PRIVASI (UNCAST) =================
 
-@client.on(events.NewMessage(pattern=r'\.uncast', outgoing=True))
-async def uncast_handler(event):
-    await event.edit("🧹 `Uncasting...` Menghapus jejak Anda.")
-    async for msg in client.iter_messages(event.chat_id, from_user="me"):
-        await msg.delete()
-    await event.respond("✅ **Uncast Selesai.**", delete_after=5)
-
-@client.on(events.NewMessage(pattern=r'\.purge', outgoing=True))
-async def purge_handler(event):
-    reply = await event.get_reply_message()
-    if not reply: return await event.edit("❌ Reply pesan awal.")
-    msgs = []
-    async for msg in client.iter_messages(event.chat_id, min_id=reply.id - 1):
-        msgs.append(msg)
-    await client.delete_messages(event.chat_id, msgs)
+@app.on_message(filters.me & filters.command("uncast", "."))
+async def uncast_handler(client, message: Message):
+    await message.edit("🧹 `Uncasting...` Menghapus jejak.")
+    async for msg in client.get_chat_history(message.chat.id):
+        if msg.from_user and msg.from_user.is_self:
+            try:
+                await msg.delete()
+            except:
+                pass
+    await message.respond("✅ **Uncast Selesai.**")
 
 # ================= 3. FITUR LOKASI =================
 
-@client.on(events.NewMessage(pattern=r'\.lokasi (.*)', outgoing=True))
-async def send_custom_location(event):
-    place_name = event.pattern_match.group(1)
-    await event.edit(f"🔍 **Mencari:** `{place_name}`...")
+@app.on_message(filters.me & filters.command("lokasi", "."))
+async def lokasi_handler(_, message: Message):
+    if len(message.command) < 2:
+        return await message.edit("❌ Masukkan nama tempat!")
+    place = message.text.split(None, 1)[1]
+    await message.edit(f"🔍 `Mencari:` {place}...")
     try:
-        location = geolocator.geocode(place_name)
+        location = geolocator.geocode(place)
         if location:
-            await event.delete()
-            await client(functions.messages.SendMediaRequest(
-                peer=event.chat_id,
-                media=types.InputMediaGeoPoint(geo_point=types.InputGeoPoint(lat=float(location.latitude), long=float(location.longitude))),
-                message=f"📍 **Lokasi:** `{location.address}`"
-            ))
-    except: await event.edit("❌ Gagal mencari lokasi.")
+            await message.delete()
+            await app.send_location(message.chat.id, location.latitude, location.longitude)
+        else:
+            await message.edit("❌ Lokasi tidak ditemukan.")
+    except:
+        await message.edit("❌ Gagal mencari lokasi.")
 
 # ================= 4. FITUR FAKE STATUS & GAME =================
 
-@client.on(events.NewMessage(pattern=r'\.fake (.*)', outgoing=True))
-async def fake_action(event):
-    input_str = event.pattern_match.group(1).lower()
-    actions = {"typing": functions.messages.SetTypingRequest.TYPING, "playing": functions.messages.SetTypingRequest.PLAYING, "recording": functions.messages.SetTypingRequest.RECORD_AUDIO}
-    if input_str in actions:
-        await event.delete()
-        for _ in range(5):
-            await client(functions.messages.SetTypingRequest(peer=event.chat_id, action=actions[input_str]))
-            await asyncio.sleep(5)
+@app.on_message(filters.me & filters.command("fake", "."))
+async def fake_handler(client, message: Message):
+    if len(message.command) < 2: 
+        return await message.edit("❌ Gunakan: `.fake typing` atau `.fake playing`")
+    action = message.command[1].lower()
+    await message.delete()
+    # Pilihan: typing, playing, recording_audio
+    await client.send_chat_action(message.chat.id, action)
 
-@client.on(events.NewMessage(pattern=r'\.(dadu|slot|bola)', outgoing=True))
-async def game_stiker(event):
+@app.on_message(filters.me & filters.command(["dadu", "slot", "bola"], "."))
+async def game_handler(_, message: Message):
     game_map = {"dadu": "🎲", "slot": "🎰", "bola": "⚽"}
-    await event.delete()
-    await client(functions.messages.SendDiceRequest(peer=event.chat_id, emoji=game_map[event.pattern_match.group(1)]))
+    emoji = game_map[message.command[0]]
+    await message.delete()
+    await app.send_dice(message.chat.id, emoji)
 
-# ================= 5. FITUR CERDAS (AI & TRANSLATE) =================
+# ================= 5. FITUR CERDAS (AI) =================
 
-@client.on(events.NewMessage(pattern=r'\.tr (.*)', outgoing=True))
-async def translate_handler(event):
-    dest_lang = event.pattern_match.group(1)
-    reply = await event.get_reply_message()
-    if reply and reply.message:
-        await event.edit("🔄 `Translating...`")
-        result = translator.translate(reply.message, dest=dest_lang)
-        await event.edit(f"**Terjemahan ({result.dest}):**\n\n{result.text}")
-
-@client.on(events.NewMessage(pattern=r'\.ai (.*)', outgoing=True))
-async def ai_handler(event):
-    prompt = event.pattern_match.group(1)
-    await event.edit("🤖 `AI Thinking...`")
+@app.on_message(filters.me & filters.command("ai", "."))
+async def ai_handler(_, message: Message):
+    if len(message.command) < 2:
+        return await message.edit("❌ Masukkan pertanyaan!")
+    prompt = message.text.split(None, 1)[1]
+    await message.edit("🤖 `AI Thinking...` ")
     try:
         res = requests.get(f"https://api.simsimi.net/v2/?text={prompt}&lc=id").json()
-        await event.edit(f"🤖 **AI:**\n\n{res['success']}")
-    except: await event.edit("❌ Gagal terhubung ke AI.")
+        await message.edit(f"🤖 **AI:**\n\n{res['success']}")
+    except:
+        await message.edit("❌ Gagal terhubung ke AI.")
 
 print("✅ STOPIO ULTIMATE USERBOT 26 READY!")
-client.start()
-client.run_until_disconnected()
+app.run()
