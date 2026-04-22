@@ -1,0 +1,6 @@
+telethon
+python-dotenv
+requests
+geopy
+googletrans==4.0.0-rc1
+pillow
