@@ -97,7 +97,7 @@ async def anim_handler(_, message):
             try:
                 await message.edit(frame)
                 # Jeda ideal adalah 0.5 detik agar tidak terkena Flood Limit
-                await asyncio.sleep(0.5) 
+                await asyncio.sleep(0.8) 
             except Exception:
                 # Jika terkena limit, kita hentikan sementara agar tidak banned
                 break 
