@@ -16,7 +16,7 @@ API_ID = int(os.getenv("API_ID"))
 API_HASH = os.getenv("API_HASH")
 STRING_SESSION = os.getenv("STRING_SESSION")
 
-client = TelegramClient(STRING_SESSION, API_ID, API_HASH)
+client = TelegramClient(StringSession(STRING_SESSION), API_ID, API_HASH)
 geolocator = Nominatim(user_agent="my_userbot_2026")
 translator = Translator()
 
