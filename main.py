@@ -117,6 +117,6 @@ async def ai_handler(event):
         await event.edit(f"🤖 **AI:**\n\n{res['success']}")
     except: await event.edit("❌ Gagal terhubung ke AI.")
 
-print("✅ ULTIMATE USERBOT 2026 READY!")
+print("✅ STOPIO ULTIMATE USERBOT 26 READY!")
 client.start()
 client.run_until_disconnected()
