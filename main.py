@@ -59,12 +59,46 @@ async def translate_handler(_, message):
 # --- 🎭 FITUR HIBURAN & STATUS ---
 
 @app.on_message(filters.me & filters.command("fake", "."))
-async def fake_handler(client, message):
-    if len(message.command) < 2: return
-    action = message.command[1].lower()
+async def fake_handler(client, message: Message):
+    if len(message.command) < 2:
+        return await message.edit("❌ Gunakan: `.fake typing` atau `.fake playing` atau `.fake off` ")
+    
+    action_type = message.command[1].lower()
+    
+    # Map input ke ChatAction Pyrogram
+    from pyrogram.enums import ChatAction
+    
+    actions = {
+        "typing": ChatAction.TYPING,
+        "playing": ChatAction.PLAYING,
+        "recording": ChatAction.RECORD_AUDIO,
+        "video": ChatAction.RECORD_VIDEO,
+        "location": ChatAction.FIND_LOCATION
+    }
+
+    if action_type == "off":
+        # Cara menghentikan loop adalah dengan menghapus variabel global (logika sederhana)
+        if hasattr(client, "fake_loop"):
+            client.fake_loop = False
+        return await message.edit("📴 **Status palsu dimatikan.**")
+
+    if action_type not in actions:
+        return await message.edit("❌ Aksi tidak dikenal.")
+
     await message.delete()
-    # Aksi: typing, playing, recording_video
-    await client.send_chat_action(message.chat.id, action)
+    
+    # Kita buat loop agar status tetap muncul terus-menerus
+    # Kita simpan status di object client agar bisa dimatikan nanti
+    client.fake_loop = True
+    
+    # Jalankan loop di background agar bot tetap bisa merespon perintah lain
+    while hasattr(client, "fake_loop") and client.fake_loop:
+        try:
+            await client.send_chat_action(message.chat.id, actions[action_type])
+            # Jeda 4 detik karena status typing di Telegram hilang setelah 5 detik
+            await asyncio.sleep(4) 
+        except Exception:
+            break
 
 @app.on_message(filters.me & filters.command(["dadu", "slot"], "."))
 async def game_handler(_, message):
