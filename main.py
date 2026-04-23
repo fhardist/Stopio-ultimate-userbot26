@@ -81,7 +81,7 @@ async def fake_handler(client, message: Message):
         if chat_id in active_fake_tasks:
             active_fake_tasks[chat_id].cancel()
             del active_fake_tasks[chat_id]
-            return await message.edit("📴 **Status palsu dihentikan!**")
+            return await message.edit("📴 **Status dihentikan!**")
         return await message.edit("❌ Tidak ada status yang sedang berjalan.")
 
     if action_type not in actions:
