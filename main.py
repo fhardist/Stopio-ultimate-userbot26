@@ -74,34 +74,33 @@ async def game_handler(_, message):
 
 @app.on_message(filters.me & filters.command("em", "."))
 async def anim_handler(_, message):
-    # Kita pakai spasi yang berbeda jumlahnya agar Telegram mendeteksi "perubahan teks" yang nyata
-    frames = [
-        "🚶. ", 
-        " .🚶", 
-        "🚶..", 
-        "..🚶", 
-        "🚶...", 
-        "...🚶", 
-        "🐢. ", 
-        " .🐢", 
-        "🐢.."
+    # Cerita animasi: Jalan kaki -> Lari -> Naik Motor -> Sampai
+    perjalanan = [
+        "🚶        ", "  🚶      ", "    🚶    ", "      🚶  ", "        🚶",
+        "🏃💨      ", "  🏃💨    ", "    🏃💨  ", "      🏃💨", "        🏃💨",
+        "🏍️         ", "  🏍️       ", "    🏍️     ", "      🏍️   ", "        🏍️ ",
+        "🏙️--🏍️--   ", "🏙️----🏍️-- ", "🏙️------🏍️ ", "🏡--🏍️--   ", "🏡----🏍️-- ",
+        "📦 ✨       ", "📍 PAKET SAMPAI!"
     ]
     
-    await message.edit("🎬 `Memulai animasi...`")
-    await asyncio.sleep(1) # Jeda awal agar server siap
-    
-    for _ in range(2): # Ulangi 2 kali
-        for frame in frames:
-            try:
-                # Kita tambahkan edit dengan paksa
-                await message.edit(frame)
-                # Jeda 0.7 detik adalah "Sweet Spot" agar tidak dianggap spam tapi tetap terlihat gerak
-                await asyncio.sleep(0.7) 
-            except Exception as e:
-                # Kalau ada error 'Message Not Modified', kita abaikan saja
-                continue 
-                
-    await message.edit("✅ Animasi Berhasil Jalankan!")
+    await message.edit("🎬 `Menjalankan Misi Pengiriman...` ")
+    await asyncio.sleep(1)
+
+    for frame in perjalanan:
+        try:
+            # Kita tambahkan simbol transparan (invisible char) agar Telegram selalu refresh
+            # Simbol: \u200b (Zero Width Space)
+            await message.edit(f"{frame}\u200b")
+            
+            # Jeda 0.6 detik adalah yang paling aman dan smooth di 2026
+            await asyncio.sleep(0.6) 
+            
+        except Exception:
+            # Jika kena limit atau error teks sama, lewati ke frame berikutnya
+            continue
+
+    await asyncio.sleep(1)
+    await message.edit("✅ **Misi Selesai, Bro!**")
 
 # --- 📍 FITUR LOKASI & PRIVASI ---
 
