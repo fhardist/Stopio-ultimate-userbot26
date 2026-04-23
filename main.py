@@ -109,11 +109,43 @@ async def ai_handler(_, message):
         await message.edit(f"🤖 **AI:**\n\n{res['answer']}")
     except: await message.edit("❌ Gagal terhubung ke AI.")
 
-# ================= 🤖 ASISTEN BOT =================
+# ================= 🤖 ASISTEN BOT (DIPERBAIKI) =================
 
 @bot.on_message(filters.command("start"))
 async def bot_start(_, message):
-    await message.reply("Halo Boss! Saya Asisten Userbot Anda. Silakan gunakan perintah dari akun utama.")
+    await message.reply(
+        "👋 **Halo Boss!**\n\n"
+        "Saya adalah sistem asisten Userbot Anda.\n"
+        "Ketik /help untuk melihat daftar perintah yang tersedia."
+    )
+
+@bot.on_message(filters.command("help"))
+async def bot_help(_, message):
+    menu_text = (
+        "📜 **LIST PERINTAH ASISTEN**\n\n"
+        "🆔 `/id` - Cek ID Telegram Anda\n"
+        "📊 `/status` - Cek status server bot\n"
+        "🤖 `/tanya [teks]` - Tanya AI lewat asisten\n\n"
+        "⚠️ *Perintah ubot (seperti .ping, .fake) tetap diketik di akun utama, bukan di sini.*"
+    )
+    await message.reply(menu_text)
+
+@bot.on_message(filters.command("id"))
+async def bot_id(_, message):
+    await message.reply(f"🆔 ID Anda: `{message.from_user.id}`\n📍 Chat ID: `{message.chat.id}`")
+
+@bot.on_message(filters.command("tanya"))
+async def bot_ai(_, message):
+    if len(message.command) < 2:
+        return await message.reply("Contoh: `/tanya cara masak kentang mustopa` ")
+    
+    prompt = message.text.split(None, 1)[1]
+    wait = await message.reply("🔍 `Asisten sedang mencari jawaban...` ")
+    try:
+        res = requests.get(f"https://api.sandipbaruwal.com/gpt4?query={prompt}").json()
+        await wait.edit(f"🤖 **Jawaban AI:**\n\n{res['answer']}")
+    except:
+        await wait.edit("❌ Gagal terhubung ke AI.")
 
 # ================= RUNNER (V2 COMPATIBLE) =================
 
