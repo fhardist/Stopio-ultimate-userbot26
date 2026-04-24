@@ -189,6 +189,23 @@ async def bot_help(_, message):
     )
     await message.reply(help_text)
 
+@bot.on_message(filters.command("id"))
+async def bot_id(_, message):
+    await message.reply(f"🆔 ID Anda: `{message.from_user.id}`\n📍 Chat ID: `{message.chat.id}`")
+
+@bot.on_message(filters.command("tanya"))
+async def bot_ai(_, message):
+    if len(message.command) < 2:
+        return await message.reply("Contoh: `/tanya cara masak kentang mustopa` ")
+    
+    prompt = message.text.split(None, 1)[1]
+    wait = await message.reply("🔍 `Asisten sedang mencari jawaban...` ")
+    try:
+        res = requests.get(f"https://api.sandipbaruwal.com/gpt4?query={prompt}").json()
+        await wait.edit(f"🤖 **Jawaban AI:**\n\n{res['answer']}")
+    except:
+        await wait.edit("❌ Gagal terhubung ke AI.")
+
 async def main():
     await app.start()
     await bot.start()
