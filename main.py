@@ -118,6 +118,31 @@ async def game_handler(client, message):
     await message.delete()
     await client.send_dice(message.chat.id, emoji=emoji)
 
+@app.on_message(filters.me & filters.command("fake", "."))
+async def fake_handler(client, message):
+    global active_fake_tasks
+    if len(message.command) < 2: return await message.edit("❌ `.fake typing` / `.fake off` ")
+    action_type = message.command[1].lower()
+    chat_id = message.chat.id
+    actions = {"typing": ChatAction.TYPING, "playing": ChatAction.PLAYING, "recording": ChatAction.RECORD_AUDIO}
+    if action_type == "off":
+        if chat_id in active_fake_tasks:
+            active_fake_tasks[chat_id].cancel()
+            active_fake_tasks.pop(chat_id, None)
+            return await message.edit("📴 **Fake Status Off.**")
+        return await message.edit("❌ Gak ada yang aktif.")
+    if action_type not in actions: return
+    if chat_id in active_fake_tasks: active_fake_tasks[chat_id].cancel()
+    await message.delete()
+    async def looping_action():
+        try:
+            while True:
+                await client.send_chat_action(chat_id, actions[action_type])
+                await asyncio.sleep(4)
+        except asyncio.CancelledError: pass
+    task = asyncio.create_task(looping_action())
+    active_fake_tasks[chat_id] = task
+
 # ===============================================================
 # 💬 AUTO REPLY & WELCOME (DENGAN FIX)
 # ===============================================================
