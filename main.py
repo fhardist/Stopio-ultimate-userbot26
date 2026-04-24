@@ -1,17 +1,14 @@
-import os
-import asyncio
-import requests
-import time
+import os, asyncio, requests, time
 from pyrogram import Client, filters
 from pyrogram.types import Message
-from pyrogram.enums import ChatAction
+from pyrogram.enums import ChatAction, ChatMemberStatus
 from geopy.geocoders import Nominatim
 from dotenv import load_dotenv
 
 load_dotenv()
 
 # ===============================================================
-# ⚙️ KONFIGURASI SERVER & API
+# ⚙️ KONFIGURASI
 # ===============================================================
 API_ID = int(os.getenv("API_ID"))
 API_HASH = os.getenv("API_HASH")
@@ -22,220 +19,155 @@ app = Client("my_userbot", session_string=STRING_SESSION, api_id=API_ID, api_has
 bot = Client("asisten_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
 geolocator = Nominatim(user_agent="my_userbot_2026")
-active_fake_tasks = {}
-autoreply_db = {}
+active_fake_tasks, autoreply_db = {}, {}
 is_welcome_on = False
 
 # ===============================================================
-# ⚡ FITUR SANGMATA (CEK RIWAYAT NAMA) 
+# 🛠️ MODUL 1: ADMIN & GROUP MGMT (KICK, BAN, MUTE)
 # ===============================================================
-
-@app.on_message(filters.me & filters.command("sg", "."))
-async def sangmata_handler(client, message):
+@app.on_message(filters.me & filters.command(["kick", "ban", "mute"], "."))
+async def admin_tools(client, message):
+    cmd = message.command[0]
     reply = message.reply_to_message
-    if not reply:
-        return await message.edit("❌ **Balas ke pesan orangnya, Bro!**")
+    if not reply: return await message.edit("❌ Reply ke orangnya!")
     
     user_id = reply.from_user.id
-    await message.edit("🔍 `Mengecek riwayat nama di database Sangmata...` ")
-    
-    # Menggunakan API publik Sangmata/Sangmata Beta
     try:
-        # Kita panggil asisten bot Sangmata lewat akun utama kita (Userbot)
-        sg_bot = "SangMata_BOT" # Username bot sangmata
-        await client.send_message(sg_bot, f"/search_id {user_id}")
-        await asyncio.sleep(2) # Tunggu bot jawab
-        
-        async for sg_msg in client.get_chat_history(sg_bot, limit=1):
-            if sg_msg.text:
-                await message.edit(f"🎭 **Riwayat Nama {reply.from_user.first_name}:**\n\n{sg_msg.text}")
-            else:
-                await message.edit("❌ Tidak ada riwayat nama ditemukan.")
-    except Exception as e:
-        await message.edit(f"❌ Gagal cek Sangmata: {str(e)}")
-        
-# ===============================================================
-# ⚡ FITUR PING (DENGAN LATENCY) & UNCAST
-# ===============================================================
+        if cmd == "kick":
+            await client.ban_chat_member(message.chat.id, user_id)
+            await client.unban_chat_member(message.chat.id, user_id)
+            await message.edit(f"🚀 **{reply.from_user.first_name} ditendang!**")
+        elif cmd == "ban":
+            await client.ban_chat_member(message.chat.id, user_id)
+            await message.edit(f"🚫 **{reply.from_user.first_name} di-banned!**")
+        elif cmd == "mute":
+            await client.restrict_chat_member(message.chat.id, user_id, permissions=None)
+            await message.edit(f"🙊 **{reply.from_user.first_name} dibisukan!**")
+    except Exception as e: await message.edit(f"❌ Error: {e}")
 
+# ===============================================================
+# 📥 MODUL 2: DOWNLOADER (SOSMED)
+# ===============================================================
+@app.on_message(filters.me & filters.command("dl", "."))
+async def downloader(client, message):
+    if len(message.command) < 2: return await message.edit("❌ `.dl [link]`")
+    link = message.text.split(None, 1)[1]
+    await message.edit("⏳ `Downloading via API...` ")
+    try:
+        # Menggunakan API pihak ketiga gratis untuk TikTok/IG/YT
+        res = requests.get(f"https://api.tiklydown.eu.org/api/download?url={link}").json()
+        video_url = res.get("video", {}).get("noWatermark") or res.get("url")
+        if video_url:
+            await client.send_video(message.chat.id, video_url, caption="✅ Berhasil Download!")
+            await message.delete()
+        else: await message.edit("❌ Link gak support.")
+    except: await message.edit("❌ Gagal download.")
+
+# ===============================================================
+# 🎨 MODUL 3: MEDIA TOOLS (STIKER, GIF, INFO)
+# ===============================================================
+@app.on_message(filters.me & filters.command("stiker", "."))
+async def sticker_maker(client, message):
+    reply = message.reply_to_message
+    if not reply or not (reply.photo or reply.document): return await message.edit("❌ Reply ke foto!")
+    path = await reply.download()
+    await client.send_sticker(message.chat.id, path)
+    await message.delete()
+    if os.path.exists(path): os.remove(path)
+
+@app.on_message(filters.me & filters.command("togif", "."))
+async def to_gif(client, message):
+    reply = message.reply_to_message
+    if not reply or not reply.video: return await message.edit("❌ Reply ke video!")
+    await message.edit("🔄 `Converting to GIF...` ")
+    path = await reply.download()
+    await client.send_animation(message.chat.id, path)
+    await message.delete()
+    if os.path.exists(path): os.remove(path)
+
+# ===============================================================
+# 📡 FITUR ASLI (PING, SG, LOKASI, EM, GAMES, FAKE)
+# ===============================================================
 @app.on_message(filters.me & filters.command("ping", "."))
 async def ping_handler(_, message):
     start = time.time()
     await message.edit("🚀 `Pinging...` ")
-    end = time.time()
-    latency = round((end - start) * 1000, 2)
-    await message.edit(
-        f"🚀 **Userbot Online!**\n"
-        f"📡 **Latency:** `{latency} ms`\n"
-        f"👤 **Status:** `Stable (V3 Final)`"
-    )
+    latency = round((time.time() - start) * 1000, 2)
+    await message.edit(f"🚀 **Online!**\n📡 **Latency:** `{latency} ms`\n👤 **Status:** `Admin IT Mode` ")
 
-@app.on_message(filters.me & filters.command("uncast", "."))
-async def uncast_handler(client, message):
-    await message.edit("🧹 `Cleaning messages...` ")
-    async for msg in client.get_chat_history(message.chat.id, limit=50):
-        if msg.from_user and msg.from_user.is_self:
-            try: await msg.delete()
-            except: pass
+@app.on_message(filters.me & filters.command("sg", "."))
+async def sangmata_handler(client, message):
+    reply = message.reply_to_message
+    if not reply: return await message.edit("❌ Reply orangnya!")
+    user_id = reply.from_user.id
+    await message.edit("🔍 `Checking history...` ")
+    await client.send_message("SangMata_BOT", f"/search_id {user_id}")
+    await asyncio.sleep(2)
+    async for sg_msg in client.get_chat_history("SangMata_BOT", limit=1):
+        await message.edit(f"🎭 **Riwayat Nama:**\n\n{sg_msg.text}")
+
+@app.on_message(filters.me & filters.command("em", "."))
+async def em_handler(_, message):
+    for s in ["📦", "🚀", "📦 — 🚀", "📦 —— 🚀", "📍 Paket Sampai!"]:
+        await message.edit(s)
+        await asyncio.sleep(0.4)
+
+@app.on_message(filters.me & filters.command(["dadu", "slot", "basket", "bola", "panah"], "."))
+async def game_handler(client, message):
+    emoji = {"dadu":"🎲","slot":"🎰","basket":"🏀","bola":"⚽","panah":"🎯"}.get(message.command[0])
+    await message.delete()
+    await client.send_dice(message.chat.id, emoji=emoji)
 
 # ===============================================================
-# ⚡ FITUR AUTO REPLY & WELCOME
+# 💬 AUTO REPLY & WELCOME (DENGAN FIX)
 # ===============================================================
-
 @app.on_message(filters.me & filters.command("set", "."))
-async def set_autoreply(_, message):
-    if "|" not in message.text:
-        return await message.edit("❌ Format: `.set jawaban | kata_kunci` ")
+async def set_reply(_, message):
     try:
         _, data = message.text.split(" ", 1)
         jawaban, kunci = data.split("|")
         autoreply_db[kunci.strip().lower()] = jawaban.strip()
-        await message.edit(f"✅ **Auto Reply Aktif!**\n🔑 Keyword: `{kunci.strip()}`\n💬 Balasan: `{jawaban.strip()}`")
-    except: await message.edit("❌ Gagal. Cek format pemisah `|` ")
+        await message.edit(f"✅ Auto Reply: `{kunci.strip()}`")
+    except: await message.edit("❌ `.set jawaban | kunci` ")
+
+@app.on_message(filters.me & filters.command("reset", "."))
+async def reset_reply(_, message):
+    autoreply_db.clear()
+    await message.edit("🗑️ Auto Reply direset!")
 
 @app.on_message(filters.me & filters.command("welcome", "."))
 async def welcome_toggle(_, message):
     global is_welcome_on
-    status = message.command[1].lower() if len(message.command) > 1 else ""
-    if status == "on":
-        is_welcome_on = True
-        await message.edit("✅ **Welcome Message: ON**")
-    else:
-        is_welcome_on = False
-        await message.edit("📴 **Welcome Message: OFF**")
+    is_welcome_on = (message.command[1].lower() == "on") if len(message.command) > 1 else False
+    await message.edit(f"👋 Welcome: {'ON' if is_welcome_on else 'OFF'}")
 
 @app.on_message(filters.new_chat_members)
 async def welcome_process(_, message):
     if is_welcome_on:
-        for member in message.new_chat_members:
-            await message.reply(f"Selamat Datang {member.mention}! 🔥")
-
-# ===============================================================
-# 🖼️ FITUR STIKER MAKER
-# ===============================================================
-
-@app.on_message(filters.me & filters.command("stiker", "."))
-async def sticker_maker(client, message):
-    reply = message.reply_to_message
-    if not reply or not (reply.photo or reply.document):
-        return await message.edit("❌ Balas ke foto untuk jadi stiker.")
-    await message.edit("⏳ `Processing Sticker...` ")
-    path = await reply.download()
-    try:
-        await client.send_sticker(message.chat.id, path)
-        await message.delete()
-    except Exception as e: await message.edit(f"❌ Error: {e}")
-    if os.path.exists(path): os.remove(path)
-
-# ===============================================================
-# 📍 FITUR LOKASI & ANIMASI KURIR
-# ===============================================================
-
-@app.on_message(filters.me & filters.command("lokasi", "."))
-async def lokasi_handler(client, message):
-    if len(message.command) < 2: return await message.edit("❌ Contoh: `.lokasi Jakarta` ")
-    query = message.text.split(None, 1)[1]
-    await message.edit(f"📍 `Mencari: {query}...` ")
-    try:
-        location = geolocator.geocode(query)
-        if location:
-            await client.send_location(message.chat.id, location.latitude, location.longitude)
-            await message.delete()
-        else: await message.edit("❌ Gak ketemu.")
-    except: await message.edit("❌ API Error.")
-
-@app.on_message(filters.me & filters.command("em", "."))
-async def em_handler(_, message):
-    steps = ["📦", "🚀", "📦 — 🚀", "📦 —— 🚀", "📦 ——— 🚀", "📍 Paket Sampai!"]
-    for s in steps:
-        await message.edit(s)
-        await asyncio.sleep(0.4)
-
-# ===============================================================
-# 🎲 FITUR GAME & FAKE STATUS
-# ===============================================================
-
-@app.on_message(filters.me & filters.command(["dadu", "slot", "basket", "bola", "panah"], "."))
-async def game_handler(client, message):
-    emoji = {"dadu":"🎲","slot":"🎰","basket":"🏀","bola":"⚽","pan—nah":"🎯"}.get(message.command[0])
-    await message.delete()
-    await client.send_dice(message.chat.id, emoji=emoji)
-
-@app.on_message(filters.me & filters.command("fake", "."))
-async def fake_handler(client, message):
-    global active_fake_tasks
-    if len(message.command) < 2: return await message.edit("❌ `.fake typing` / `.fake off` ")
-    action_type = message.command[1].lower()
-    chat_id = message.chat.id
-    actions = {"typing": ChatAction.TYPING, "playing": ChatAction.PLAYING, "recording": ChatAction.RECORD_AUDIO}
-    if action_type == "off":
-        if chat_id in active_fake_tasks:
-            active_fake_tasks[chat_id].cancel()
-            active_fake_tasks.pop(chat_id, None)
-            return await message.edit("📴 **Fake Status Off.**")
-        return await message.edit("❌ Gak ada yang aktif.")
-    if action_type not in actions: return
-    if chat_id in active_fake_tasks: active_fake_tasks[chat_id].cancel()
-    await message.delete()
-    async def looping_action():
-        try:
-            while True:
-                await client.send_chat_action(chat_id, actions[action_type])
-                await asyncio.sleep(4)
-        except asyncio.CancelledError: pass
-    task = asyncio.create_task(looping_action())
-    active_fake_tasks[chat_id] = task
-
-# ===============================================================
-# 🤖 ASISTEN & LOGIC
-# ===============================================================
+        for m in message.new_chat_members:
+            await message.reply(f"Selamat Datang {m.mention}! 🔥")
 
 @app.on_message(filters.text & ~filters.me)
-async def auto_respond_process(_, message):
-    msg_text = message.text.lower()
-    for kunci, jawaban in autoreply_db.items():
-        if kunci in msg_text: await message.reply(jawaban)
+async def auto_respond(_, message):
+    for k, v in autoreply_db.items():
+        if k in message.text.lower(): await message.reply(v)
 
+# ===============================================================
+# 🤖 ASISTEN & LAUNCH
+# ===============================================================
 @bot.on_message(filters.command("help"))
 async def bot_help(_, message):
-    await message.reply(
-        "📖 **STOPIO USERBOT ULTIMATE CONTROL**\n"
-        "━━━━━━━━━━━━━━━━━━━━\n"
-        "👁️ `.sg` (Sangmata)\n"
-        "📡 `.ping` (Latency) | `.uncast\n"
-        "📍 `.lokasi [nama]` | `.em` (Kurir)\n"
-        "🎲 `.slot` `.dadu` `.basket` `.bola` `.panah` \n"
-        "🎭 `.fake typing` | `.fake off` \n"
-        "🖼️ `.stiker` (Reply ke foto)\n"
-        "💬 `.set jawaban | kunci` \n"
-        "👋 `.welcome on/off` \n"
-        "🤖 `/tanya` (AI) | `/id` \n"
-        "━━━━━━━━━━━━━━━━━━━━"
-    )
-
-@bot.on_message(filters.command("id"))
-async def bot_id(_, message):
-    await message.reply(f"🆔 ID Anda: `{message.from_user.id}`\n📍 Chat ID: `{message.chat.id}`")
-
-@bot.on_message(filters.command("tanya"))
-async def bot_ai(_, message):
-    if len(message.command) < 2:
-        return await message.reply("Contoh: `/tanya cara masak kentang mustopa` ")
-    
-    prompt = message.text.split(None, 1)[1]
-    wait = await message.reply("🔍 `Asisten sedang mencari jawaban...` ")
-    try:
-        res = requests.get(f"https://api.sandipbaruwal.com/gpt4?query={prompt}").json()
-        await wait.edit(f"🤖 **Jawaban AI:**\n\n{res['answer']}")
-    except:
-        await wait.edit("❌ Gagal terhubung ke AI.")
-
-# ================= RUNNER (V2 COMPATIBLE) =================
+    await message.reply("🛠️ **MENU ULTIMATE V4**\n\n"
+                        "📡 `.ping` | `.sg` | `.dl` [link]\n"
+                        "🔨 `.kick` | `.ban` | `.mute` (Reply)\n"
+                        "📦 `.em` | `.lokasi` | `.stiker` | `.togif` \n"
+                        "🎰 `.slot` `.dadu` `.panah` \n"
+                        "💬 `.set` | `.reset` | `.welcome on/off` \n"
+                        "🤖 `/tanya` | `/id` ")
 
 async def main():
     await app.start()
     await bot.start()
-    print("✅ SEMUA ONLINE!")
     await asyncio.Event().wait()
 
 if __name__ == "__main__":
