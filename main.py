@@ -155,15 +155,39 @@ async def auto_respond(_, message):
 # ===============================================================
 # 🤖 ASISTEN & LAUNCH
 # ===============================================================
+
 @bot.on_message(filters.command("help"))
 async def bot_help(_, message):
-    await message.reply("🛠️ **MENU ULTIMATE V4**\n\n"
-                        "📡 `.ping` | `.sg` | `.dl` [link]\n"
-                        "🔨 `.kick` | `.ban` | `.mute` (Reply)\n"
-                        "📦 `.em` | `.lokasi` | `.stiker` | `.togif` \n"
-                        "🎰 `.slot` `.dadu` `.panah` \n"
-                        "💬 `.set` | `.reset` | `.welcome on/off` \n"
-                        "🤖 `/tanya` | `/id` ")
+    help_text = (
+        "✨ **USERBOT ULTIMATE V4 CONTROL** ✨\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        "📡 **INTEL & KONEKSI**\n"
+        "• `.ping` : Cek latency server (ms).\n"
+        "• `.sg` : Cek riwayat nama (Reply target).\n"
+        "• `.uncast` : Hapus 50 pesan lu di chat.\n\n"
+        "🔨 **ADMIN GRUP** (Reply Target)\n"
+        "• `.kick` : Tendang member dari grup.\n"
+        "• `.ban`  : Banned member permanen.\n"
+        "• `.mute` : Bisukan member (Read-only).\n\n"
+        "📥 **DOWNLOAD & MEDIA**\n"
+        "• `.dl [link]` : Download TikTok/IG/YT.\n"
+        "• `.stiker` : Foto -> Stiker (Reply foto).\n"
+        "• `.togif`  : Video -> GIF (Reply video).\n\n"
+        "⚙️ **OTOMATISASI**\n"
+        "• `.set [jawab] | [kunci]` : Auto Reply.\n"
+        "• `.reset` : Hapus semua daftar Auto Reply.\n"
+        "• `.welcome on/off` : Sapaan member baru.\n\n"
+        "🎭 **STATUS & GAMES**\n"
+        "• `.fake [typing/off]` : Status palsu.\n"
+        "• `.em` : Animasi kurir paket.\n"
+        "• `.slot` | `.dadu` | `.bola` : Games.\n\n"
+        "🤖 **ASISTEN AI**\n"
+        "• `/tanya [teks]` : Tanya AI GPT-4.\n"
+        "• `/id` : Cek ID User / ID Grup.\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n"
+        "💬 *Gunakan prefix titik (.) untuk Userbot*"
+    )
+    await message.reply(help_text)
 
 async def main():
     await app.start()
