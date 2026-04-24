@@ -1,4 +1,8 @@
-import os, asyncio, requests, time
+import os
+import asyncio
+import requests
+import time
+from datetime import datetime
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from pyrogram.enums import ChatAction, ChatMemberStatus
@@ -6,6 +10,7 @@ from geopy.geocoders import Nominatim
 from dotenv import load_dotenv
 
 load_dotenv()
+start_time = datetime.now()
 
 # ===============================================================
 # ⚙️ KONFIGURASI
@@ -21,6 +26,61 @@ bot = Client("asisten_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKE
 geolocator = Nominatim(user_agent="my_userbot_2026")
 active_fake_tasks, autoreply_db = {}, {}
 is_welcome_on = False
+
+# ===============================================================
+# 🛠️ MODUL PRODUCTIVITY (OCR & INFO)
+# ===============================================================
+
+@app.on_message(filters.me & filters.command("uptime", "."))
+async def uptime_handler(_, message):
+    now = datetime.now()
+    delta = now - start_time
+    # Menghitung durasi bot online
+    uptime_str = str(delta).split('.')[0]
+    await message.edit(f"⏳ **Bot Uptime:** `{uptime_str}`\n🚀 **Status:** `Stable`")
+
+@app.on_message(filters.me & filters.command("info", "."))
+async def info_handler(client, message):
+    reply = message.reply_to_message
+    user = reply.from_user if reply else message.from_user
+    # Cek detail user buat kebutuhan IT/Admin
+    info_text = (
+        f"👤 **USER INFORMATION**\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"🆔 **ID:** `{user.id}`\n"
+        f"👤 **Name:** `{user.first_name}`\n"
+        f"🏷️ **Username:** `@{user.username}`\n"
+        f"🤖 **Is Bot:** `{'Yes' if user.is_bot else 'No'}`\n"
+        f"Premium: `{'Yes' if user.is_premium else 'No'}`\n"
+        f"━━━━━━━━━━━━━━━━━━━━"
+    )
+    await message.edit(info_text)
+
+@app.on_message(filters.me & filters.command("ocr", "."))
+async def ocr_handler(client, message):
+    reply = message.reply_to_message
+    if not (reply and (reply.photo or reply.document)):
+        return await message.edit("❌ **Reply ke foto yang ada teksnya, Bro!**")
+    
+    await message.edit("🔍 `Scanning text (OCR)...` ")
+    path = await reply.download()
+    
+    try:
+        # Menggunakan API OCR gratis (OCR.space)
+        # Note: Ini basic API, kalau mau lebih powerfull bisa daftar API Key sendiri
+        url = "https://api.ocr.space/parse/image"
+        with open(path, 'rb') as f:
+            res = requests.post(url, files={'file': f}, data={'apikey': 'helloworld', 'language': 'eng'}).json()
+        
+        parsed_text = res.get("ParsedResults")[0].get("ParsedText")
+        if parsed_text:
+            await message.edit(f"📝 **Hasil Scan:**\n\n`{parsed_text}`")
+        else:
+            await message.edit("❌ Gagal baca teks, pastikan gambar jelas.")
+    except Exception as e:
+        await message.edit(f"❌ Error OCR: {str(e)}")
+    
+    if os.path.exists(path): os.remove(path)
 
 # ===============================================================
 # 🛠️ MODUL 1: ADMIN & GROUP MGMT (KICK, BAN, MUTE)
@@ -184,31 +244,36 @@ async def auto_respond(_, message):
 @bot.on_message(filters.command("help"))
 async def bot_help(_, message):
     help_text = (
-        "✨ **USERBOT ULTIMATE V4 CONTROL** ✨\n"
+        "✨ **USERBOT ULTIMATE** ✨\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n\n"
         "📡 **INTEL & KONEKSI**\n"
-        "• `.ping` : Cek latency server (ms).\n"
-        "• `.sg` : Cek riwayat nama (Reply target).\n"
-        "• `.uncast` : Hapus 50 pesan lu di chat.\n\n"
+        "• `.ping`   : Cek latency server (ms).\n"
+        "• `.sg`     : Cek riwayat nama (Reply).\n"
+        "• `.uncast` : Hapus 50 pesan sendiri.\n\n"
+        "🛠️ **SYSTEM & PRODUCTIVITY**\n"
+        "• `.ocr`    : Ambil teks dari foto (Reply).\n"
+        "• `.info`   : Detail profil user (Reply).\n"
+        "• `.uptime` : Cek berapa lama bot ON.\n\n"
         "🔨 **ADMIN GRUP** (Reply Target)\n"
-        "• `.kick` : Tendang member dari grup.\n"
-        "• `.ban`  : Banned member permanen.\n"
-        "• `.mute` : Bisukan member (Read-only).\n\n"
+        "• `.kick`   : Tendang member.\n"
+        "• `.ban`    : Banned permanen.\n"
+        "• `.mute`   : Bisukan member.\n\n"
         "📥 **DOWNLOAD & MEDIA**\n"
         "• `.dl [link]` : Download TikTok/IG/YT.\n"
-        "• `.stiker` : Foto -> Stiker (Reply foto).\n"
-        "• `.togif`  : Video -> GIF (Reply video).\n\n"
+        "• `.stiker`    : Foto -> Stiker (Reply).\n"
+        "• `.togif`     : Video -> GIF (Reply).\n\n"
         "⚙️ **OTOMATISASI**\n"
         "• `.set [jawab] | [kunci]` : Auto Reply.\n"
-        "• `.reset` : Hapus semua daftar Auto Reply.\n"
-        "• `.welcome on/off` : Sapaan member baru.\n\n"
+        "• `.del [kunci]` : Hapus 1 keyword AR.\n"
+        "• `.reset`   : Reset semua Auto Reply.\n"
+        "• `.welcome on/off` : Sapaan member.\n\n"
         "🎭 **STATUS & GAMES**\n"
         "• `.fake [typing/off]` : Status palsu.\n"
-        "• `.em` : Animasi kurir paket.\n"
+        "• `.em`      : Animasi kurir paket.\n"
         "• `.slot` | `.dadu` | `.bola` : Games.\n\n"
         "🤖 **ASISTEN AI**\n"
-        "• `/tanya [teks]` : Tanya AI GPT-4.\n"
-        "• `/id` : Cek ID User / ID Grup.\n"
+        "• `/tanya`  : Tanya AI GPT-4.\n"
+        "• `/id`     : Cek ID User / Grup.\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
         "💬 *Gunakan prefix titik (.) untuk Userbot*"
     )
