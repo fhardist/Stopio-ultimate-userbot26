@@ -27,6 +27,34 @@ autoreply_db = {}
 is_welcome_on = False
 
 # ===============================================================
+# ⚡ FITUR SANGMATA (CEK RIWAYAT NAMA) 
+# ===============================================================
+
+@app.on_message(filters.me & filters.command("sg", "."))
+async def sangmata_handler(client, message):
+    reply = message.reply_to_message
+    if not reply:
+        return await message.edit("❌ **Balas ke pesan orangnya, Bro!**")
+    
+    user_id = reply.from_user.id
+    await message.edit("🔍 `Mengecek riwayat nama di database Sangmata...` ")
+    
+    # Menggunakan API publik Sangmata/Sangmata Beta
+    try:
+        # Kita panggil asisten bot Sangmata lewat akun utama kita (Userbot)
+        sg_bot = "SangMata_BOT" # Username bot sangmata
+        await client.send_message(sg_bot, f"/search_id {user_id}")
+        await asyncio.sleep(2) # Tunggu bot jawab
+        
+        async for sg_msg in client.get_chat_history(sg_bot, limit=1):
+            if sg_msg.text:
+                await message.edit(f"🎭 **Riwayat Nama {reply.from_user.first_name}:**\n\n{sg_msg.text}")
+            else:
+                await message.edit("❌ Tidak ada riwayat nama ditemukan.")
+    except Exception as e:
+        await message.edit(f"❌ Gagal cek Sangmata: {str(e)}")
+        
+# ===============================================================
 # ⚡ FITUR PING (DENGAN LATENCY) & UNCAST
 # ===============================================================
 
@@ -171,9 +199,10 @@ async def auto_respond_process(_, message):
 @bot.on_message(filters.command("help"))
 async def bot_help(_, message):
     await message.reply(
-        "📖 **USERBOT ULTIMATE CONTROL**\n"
+        "📖 **STOPIO USERBOT ULTIMATE CONTROL**\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
-        "📡 `.ping` (Latency) | `.uncast` \n"
+        "👁️ `.sg` (Sangmata)\n"
+        "📡 `.ping` (Latency) | `.uncast\n"
         "📍 `.lokasi [nama]` | `.em` (Kurir)\n"
         "🎲 `.slot` `.dadu` `.basket` `.bola` `.panah` \n"
         "🎭 `.fake typing` | `.fake off` \n"
