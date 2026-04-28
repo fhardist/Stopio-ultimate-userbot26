@@ -2,6 +2,7 @@ import os
 import asyncio
 import requests
 import time
+from pyrogram import Client, filters, idle
 from datetime import datetime
 from pyrogram import Client, filters
 from pyrogram.types import Message
@@ -340,9 +341,14 @@ async def bot_ai(_, message):
         await wait.edit("❌ Gagal terhubung ke AI.")
 
 async def main():
-    await app.start()
-    await bot.start()
-    await asyncio.Event().wait()
+    # Menggunakan 'async with' supaya otomatis handle start & stop koneksi
+    async with app:
+        async with bot:
+            print("✅ Userbot & Asisten Online, Bro!")
+            await idle() # Ini kuncinya biar Railway nggak mutus koneksi (heartbeat)
 
 if __name__ == "__main__":
-    asyncio.get_event_loop().run_until_complete(main())
+    try:
+        app.run(main())
+    except KeyboardInterrupt:
+        pass # Biar kalau di-stop manual nggak muncul error panjang
