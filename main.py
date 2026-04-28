@@ -204,6 +204,47 @@ async def fake_handler(client, message):
     active_fake_tasks[chat_id] = task
 
 # ===============================================================
+# 📍 MODUL LOKASI (REAL & FAKE GPS)
+# ===============================================================
+
+@app.on_message(filters.me & filters.command("lokasi", "."))
+async def send_location_handler(client, message):
+    if len(message.command) < 2:
+        return await message.edit("❌ Format: `.lokasi [nama tempat]`\nContoh: `.lokasi Monas`")
+    
+    address = message.text.split(None, 1)[1]
+    await message.edit(f"🔍 `Mencari lokasi: {address}...` ")
+    
+    try:
+        # Nyari koordinat pake geopy
+        location = geolocator.geocode(address)
+        if location:
+            await client.send_location(
+                chat_id=message.chat.id,
+                latitude=location.latitude,
+                longitude=location.longitude
+            )
+            await message.delete()
+        else:
+            await message.edit("❌ Lokasi gak ketemu, Bro!")
+    except Exception as e:
+        await message.edit(f"❌ Error Geopy: {str(e)}")
+
+@app.on_message(filters.me & filters.command("fakeloc", "."))
+async def fake_location_handler(client, message):
+    # Fitur kirim lokasi statis tanpa cari nama (input Lat, Long manual)
+    if len(message.command) < 3:
+        return await message.edit("❌ Format: `.fakeloc [lat] [long]`")
+    
+    try:
+        lat = float(message.command[1])
+        lon = float(message.command[2])
+        await client.send_location(message.chat.id, lat, lon)
+        await message.delete()
+    except:
+        await message.edit("❌ Masukin angka koordinat yang bener!")
+
+# ===============================================================
 # 💬 AUTO REPLY & WELCOME (DENGAN FIX)
 # ===============================================================
 @app.on_message(filters.me & filters.command("set", "."))
@@ -247,6 +288,8 @@ async def bot_help(_, message):
         "✨ **USERBOT ULTIMATE** ✨\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n\n"
         "📡 **INTEL & KONEKSI**\n"
+        "• `.lokasi [nama] : Kirim lokasi palsu via nama tempat.\n"
+        "• `.fakeloc [lat] [long] : Kirim lokasi via koordinat.\n"
         "• `.ping`   : Cek latency server (ms).\n"
         "• `.sg`     : Cek riwayat nama (Reply).\n"
         "• `.uncast` : Hapus 50 pesan sendiri.\n\n"
