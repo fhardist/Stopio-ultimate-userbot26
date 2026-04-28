@@ -14,9 +14,6 @@ from dotenv import load_dotenv
 load_dotenv()
 start_time = datetime.now()
 
-# Tambahkan di bagian import paling atas kalau belum ada
-import json
-
 # ===============================================================
 # 🔍 MODUL PINTEREST SEARCH & STORAGE
 # ===============================================================
