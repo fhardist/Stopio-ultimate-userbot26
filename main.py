@@ -21,8 +21,20 @@ API_HASH = os.getenv("API_HASH")
 STRING_SESSION = os.getenv("STRING_SESSION")
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
-app = Client("my_userbot", session_string=STRING_SESSION, api_id=API_ID, api_hash=API_HASH)
-bot = Client("asisten_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
+app = Client(
+    "my_userbot", 
+    session_string=STRING_SESSION, 
+    api_id=API_ID, 
+    api_hash=API_HASH,
+    ipv6=False 
+)
+bot = Client(
+    "asisten_bot", 
+    api_id=API_ID, 
+    api_hash=API_HASH, 
+    bot_token=BOT_TOKEN,
+    ipv6=False
+)
 
 geolocator = Nominatim(user_agent="my_userbot_2026")
 active_fake_tasks, autoreply_db = {}, {}
