@@ -2,7 +2,6 @@ import os
 import asyncio
 import requests
 import time
-import json
 from pyrogram import Client, filters, idle
 from datetime import datetime
 from pyrogram import Client, filters
@@ -14,42 +13,6 @@ from dotenv import load_dotenv
 load_dotenv()
 start_time = datetime.now()
 
-# ===============================================================
-# 🔍 MODUL PINTEREST SEARCH & STORAGE
-# ===============================================================
-
-@app.on_message(filters.me & filters.command("search", "."))
-async def pinterest_search(client, message):
-    reply = message.reply_to_message
-    if not (reply and (reply.photo or reply.document)):
-        return await message.edit("❌ **Reply ke foto yang mau dicari di Pinterest, Bro!**")
-
-    await message.edit("🔍 `Scanning image & searching Pinterest...` ")
-    path = await reply.download()
-    
-    try:
-        # Kita pake API Search Image (Contoh: Google Lens via SerpApi atau sejenisnya)
-        # Untuk demo, gua buatkan logic simpan datanya ke database asisten lu
-        
-        # Simulasi hasil search (karena butuh API Key real untuk Google Lens)
-        mock_pinterest_url = f"https://id.pinterest.com/search/pins/?q=result_from_image"
-        
-        # Simpan ke memori asisten bot (autoreply_db)
-        # Kita kasih prefix 'pnt_' biar beda sama auto reply biasa
-        key_storage = f"search_{int(time.time())}"
-        autoreply_db[key_storage] = mock_pinterest_url
-        
-        await message.edit(
-            f"✅ **Image Scanned!**\n"
-            f"📌 **Pinterest:** [Klik di Sini]({mock_pinterest_url})\n"
-            f"📂 **Saved as:** `{key_storage}`"
-        )
-        
-    except Exception as e:
-        await message.edit(f"❌ Error Search: {str(e)}")
-    
-    if os.path.exists(path): os.remove(path)
-        
 # ===============================================================
 # ⚙️ KONFIGURASI
 # ===============================================================
