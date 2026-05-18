@@ -42,7 +42,7 @@ bot = Client(
 )
 
 geolocator = Nominatim(user_agent="my_userbot_2026")
-active_fake_tasks, autoreply_db = {}, {}
+active_fake_tasks, autoreply_db, autoreply_pm_db = {}, {}, {}
 is_welcome_on = False
 
 # ===============================================================
@@ -121,35 +121,29 @@ async def start_suntik_massal(client, message):
 # 🛠️ MODUL 2: GLOBAL ACTIONS & PRIVASI (JARINGAN SERENTAK)
 # ===============================================================
 async def global_broadcast_handler(client, message):
-    # Cek input: kudu ada teks setelah .gcast ATAU reply ke media/pesan
     if len(message.command) < 2 and not message.reply_to_message:
         return await message.edit("❌ Format: `.gcast [pesan]` atau reply ke media/pesan.")
     
-    await message.edit("📢 `Memulai Global Broadcast ke semua grup...` ")
+    await message.edit("📢 `Memulai Global Broadcast ke semua grup...`")
     grup_terhitung = 0
     
     try:
-        # Ambil teks gcast jika bukan reply
         pesan_gcast = message.text.split(None, 1)[1] if len(message.command) >= 2 else ""
         
-        # 🔥 FIX: Kita kasih limit=1000 biar Pyrogram nge-pull paksa semua chat dari server Telegram
         async for dialog in client.get_dialogs(limit=1000):
-            if dialog.chat.type in [ChatType.GROUP, ChatType.SUPERGROUP] or dialog.chat.type in ["group", "supergroup"]:
+            chat_type = str(dialog.chat.type).lower()
+            if "group" in chat_type or "supergroup" in chat_type:
                 try:
-                    # Jika user ngelakuin reply ke media (foto/video/file) atau teks lain
                     if message.reply_to_message:
                         await message.reply_to_message.forward(dialog.chat.id)
                     else:
-                        # Jika cuma gcast teks biasa
                         await client.send_message(dialog.chat.id, pesan_gcast)
-                    
                     grup_terhitung += 1
-                    await asyncio.sleep(0.3) # Jeda tipis biar akun aman dari limit/banned
+                    await asyncio.sleep(0.4)
                 except Exception:
                     continue
                     
         await message.edit(f"✅ **Gcast Selesai!**\n📦 Terkirim ke `{grup_terhitung}` grup via [{client.name}].")
-        
     except Exception as e:
         await message.edit(f"❌ **Gcast Error:** `{str(e)}`")
 
@@ -160,7 +154,8 @@ async def global_ban_handler(client, message):
     await message.edit(f"🔨 `Memproses GBAN untuk {target_user.first_name}...` ")
     grup_banned = 0
     async for dialog in client.get_dialogs():
-        if dialog.chat.type in ["group", "supergroup"]:
+        chat_type = str(dialog.chat.type).lower()
+        if "group" in chat_type or "supergroup" in chat_type:
             try:
                 await client.ban_chat_member(dialog.chat.id, target_user.id)
                 grup_banned += 1
@@ -281,7 +276,6 @@ async def to_gif(client, message):
 # 🛠️ MODUL 5: ANIMASI TEKS & FUN TOOLS (ANIM, EM & LOKASI)
 # ===============================================================
 async def anim_handler(_, message):
-    # Fitur .anim (animasi teks mengetik berjalan khas ubot)
     if len(message.command) < 2: return await message.edit("❌ Format: `.anim [teks]`")
     teks_asal = message.text.split(None, 1)[1]
     tampung = ""
@@ -332,7 +326,6 @@ async def fake_location_handler(client, message):
 # 🛠️ MODUL 6: GAME EMOTICON & GAME INTERNAL SYSTEM
 # ===============================================================
 async def game_handler(client, message):
-    # Menghandle: .dadu, .slot, .basket, .bola, .panah
     cmd = message.command[0].lower()
     emoji = {"dadu":"🎲","slot":"🎰","basket":"🏀","bola":"⚽","panah":"🎯"}.get(cmd)
     if emoji:
@@ -372,17 +365,31 @@ async def fake_handler(client, message):
     task = asyncio.create_task(looping_action())
     active_fake_tasks[chat_id] = task
 
+# --- DATABASE AUTO REPLY GRUP ---
 async def set_reply(_, message):
     try:
         _, data = message.text.split(" ", 1)
         jawaban, kunci = data.split("|")
         autoreply_db[kunci.strip().lower()] = jawaban.strip()
-        await message.edit(f"✅ Auto Reply Ditambahkan: `{kunci.strip()}`")
+        await message.edit(f"✅ Auto Reply Grup Ditambahkan: `{kunci.strip()}`")
     except: await message.edit("❌ Format: `.set jawaban | kata_kunci` ")
 
 async def reset_reply(_, message):
     autoreply_db.clear()
-    await message.edit("🗑️ Seluruh database Auto Reply direset!")
+    await message.edit("🗑️ Database Auto Reply Grup direset!")
+
+# --- DATABASE AUTO REPLY PC (CHAT PRIBADI) ---
+async def set_pm_reply(_, message):
+    try:
+        _, data = message.text.split(" ", 1)
+        jawaban, kunci = data.split("|")
+        autoreply_pm_db[kunci.strip().lower()] = jawaban.strip()
+        await message.edit(f"👤✅ Auto Reply PC Ditambahkan: `{kunci.strip()}`")
+    except: await message.edit("❌ Format: `.setpm jawaban | kata_kunci` ")
+
+async def reset_pm_reply(_, message):
+    autoreply_pm_db.clear()
+    await message.edit("🗑️ Database Auto Reply PC direset!")
 
 async def welcome_toggle(_, message):
     global is_welcome_on
@@ -423,10 +430,12 @@ def register_all_handlers(client_instance):
     client_instance.add_handler(MessageHandler(fake_location_handler, filters.me & filters.command("fakeloc", ".")))
     client_instance.add_handler(MessageHandler(game_handler, filters.me & filters.command(["dadu", "slot", "basket", "bola", "panah"], ".")))
     
-    # Bind Modul 7: Fake Status & Otomatisasi
+    # Bind Modul 7: Fake Status & Otomatisasi (Grup & PC)
     client_instance.add_handler(MessageHandler(fake_handler, filters.me & filters.command("fake", ".")))
     client_instance.add_handler(MessageHandler(set_reply, filters.me & filters.command("set", ".")))
     client_instance.add_handler(MessageHandler(reset_reply, filters.me & filters.command("reset", ".")))
+    client_instance.add_handler(MessageHandler(set_pm_reply, filters.me & filters.command("setpm", ".")))
+    client_instance.add_handler(MessageHandler(reset_pm_reply, filters.me & filters.command("resetpm", ".")))
     client_instance.add_handler(MessageHandler(welcome_toggle, filters.me & filters.command("welcome", ".")))
 
 # ===============================================================
@@ -452,16 +461,30 @@ for i in range(2, 26):
         register_all_handlers(cloning_client)
         active_ubots.append(cloning_client)
 
-# Global Event Listeners untuk Event Chat (Bawaan Lama Lu)
+# Global Event Listeners untuk Event Chat & Auto Respond System
 @Client.on_message(filters.new_chat_members)
 async def welcome_process(_, message):
     if is_welcome_on:
         for m in message.new_chat_members: await message.reply(f"Selamat Datang {m.mention}! 🔥")
 
+# 🔥 SEPARATED ENGINE: Memisahkan respon chat masuk di Grup vs Room Chat Pribadi (PC)
 @Client.on_message(filters.text & ~filters.me)
 async def auto_respond(_, message):
-    for k, v in autoreply_db.items():
-        if k in message.text.lower(): await message.reply(v)
+    chat_type = str(message.chat.type).lower()
+    
+    # 1. Jika pesan masuk dari Room Chat Pribadi (PC)
+    if "private" in chat_type:
+        for k, v in autoreply_pm_db.items():
+            if k in message.text.lower():
+                await message.reply(v)
+                break
+                
+    # 2. Jika pesan masuk dari dalam Group / Supergroup
+    elif "group" in chat_type:
+        for k, v in autoreply_db.items():
+            if k in message.text.lower():
+                await message.reply(v)
+                break
 
 
 # ===============================================================
@@ -559,10 +582,10 @@ async def bot_help(_, message):
         "🎬 **4. MEDIA DOWNLOADER & CONVERTER**\n"
         "• `.dl [link]` : Download otomatis video sosmed tanpa watermark.\n"
         "• `.stiker` (Reply Foto) : Mengonversi gambar menjadi stiker Telegram.\n"
-        "• `.togif` (Reply Video) : Mengubah file video pendek menjadi format GIF.\n\n"
+        "• `.togif` (Reply Video) : Mengubah file video pendek menjadi format GIF.\n"
+        "• `.anim [teks]` : Efek ketikan teks berjalan keren (*typing effect*).\n\n"
         
         "🎭 **5. ANIMASI, FUN EFFECTS & MAP**\n"
-        "• `.anim [teks]` : Efek ketikan teks berjalan keren (*typing effect*).\n"
         "• `.em` : Animasi pengiriman paket kurir instan.\n"
         "• `.sg` (Reply) : Cek histori perubahan username via SangMata.\n"
         "• `.lokasi [nama]` : Mengirim maps koordinat via pencarian nama.\n"
@@ -572,8 +595,10 @@ async def bot_help(_, message):
         "• `.dadu` / `.slot` / `.basket` / `.bola` / `.panah` : Main game emo.\n"
         "• `.fake typing/playing/recording` : Manipulasi status aktif chat.\n"
         "• `.fake off` : Mematikan manipulasi status chat.\n"
-        "• `.set balasan | kata` : Membuat auto-respond bot jika dipicu kata.\n"
-        "• `.reset` : Menghapus semua database kata kunci auto reply.\n"
+        "• `.set balasan | kata` : Membuat auto-respond bot jika dipicu kata di GRUP.\n"
+        "• `.reset` : Menghapus semua database kata kunci auto reply GRUP.\n"
+        "• `.setpm balasan | kata` : Membuat auto-respond bot jika dipicu kata di PC (Pribadi).\n"
+        "• `.resetpm` : Menghapus semua database kata kunci auto reply PC.\n"
         "• `.welcome on/off` : Mengaktifkan sambutan otomatis member baru.\n\n"
         
         "🤖 **7. OPERASI INTERNAL BOT ASISTEN**\n"
