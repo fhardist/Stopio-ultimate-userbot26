@@ -121,22 +121,37 @@ async def start_suntik_massal(client, message):
 # 🛠️ MODUL 2: GLOBAL ACTIONS & PRIVASI (JARINGAN SERENTAK)
 # ===============================================================
 async def global_broadcast_handler(client, message):
+    # Cek input: kudu ada teks setelah .gcast ATAU reply ke media/pesan
     if len(message.command) < 2 and not message.reply_to_message:
-        return await message.edit("❌ Format: `.gcast [pesan]` atau reply ke media.")
-    await message.edit("📢 `Memulai Global Broadcast...` ")
+        return await message.edit("❌ Format: `.gcast [pesan]` atau reply ke media/pesan.")
+    
+    await message.edit("📢 `Memulai Global Broadcast ke semua grup...` ")
     grup_terhitung = 0
-    async for dialog in client.get_dialogs():
-        if dialog.chat.type in ["group", "supergroup"]:
-            try:
-                if message.reply_to_message:
-                    await message.reply_to_message.forward(dialog.chat.id)
-                else:
-                    pesan_gcast = message.text.split(None, 1)[1]
-                    await client.send_message(dialog.chat.id, pesan_gcast)
-                grup_terhitung += 1
-                await asyncio.sleep(0.3)
-            except: continue
-    await message.edit(f"✅ **Gcast Selesai!**\n📦 Terkirim ke `{grup_terhitung}` grup via [{client.name}].")
+    
+    try:
+        # Ambil teks gcast jika bukan reply
+        pesan_gcast = message.text.split(None, 1)[1] if len(message.command) >= 2 else ""
+        
+        # 🔥 FIX: Kita kasih limit=1000 biar Pyrogram nge-pull paksa semua chat dari server Telegram
+        async for dialog in client.get_dialogs(limit=1000):
+            if dialog.chat.type in [ChatType.GROUP, ChatType.SUPERGROUP] or dialog.chat.type in ["group", "supergroup"]:
+                try:
+                    # Jika user ngelakuin reply ke media (foto/video/file) atau teks lain
+                    if message.reply_to_message:
+                        await message.reply_to_message.forward(dialog.chat.id)
+                    else:
+                        # Jika cuma gcast teks biasa
+                        await client.send_message(dialog.chat.id, pesan_gcast)
+                    
+                    grup_terhitung += 1
+                    await asyncio.sleep(0.3) # Jeda tipis biar akun aman dari limit/banned
+                except Exception:
+                    continue
+                    
+        await message.edit(f"✅ **Gcast Selesai!**\n📦 Terkirim ke `{grup_terhitung}` grup via [{client.name}].")
+        
+    except Exception as e:
+        await message.edit(f"❌ **Gcast Error:** `{str(e)}`")
 
 async def global_ban_handler(client, message):
     reply = message.reply_to_message
