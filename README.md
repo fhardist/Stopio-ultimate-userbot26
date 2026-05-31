@@ -57,7 +57,7 @@ Di dashboard Railway, masuk ke tab **Variables** dan masukkan:
 | `.lokasi [nama]` | Kirim lokasi palsu (Share Loc) |
 | `.em` | Animasi kurir paket jalan |
 | `.fake [type]` | Status Mengetik (`typing`/`playing`/`off`) |
-| `.slot` / `.dadu` | Fitur game/judi interaktif |
+| `.slot` / `.dadu` | Fitur game interaktif |
 
 ### 🤖 Asisten Bot (Awalan Garing `/`)
 | Perintah | Fungsi |
